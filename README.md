@@ -1,4 +1,4 @@
-# 2D-Gate video plugin for XMBC
+# 2D-Gate video plugin for KODI
 #### [2D-Gate 動畫線上看] 是 [KODI](https://kodi.tv/download/) 的外掛，可以在 KODI 裡觀看網站所提供的資源
 ---
 安裝
