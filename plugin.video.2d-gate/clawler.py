@@ -333,6 +333,26 @@ class ParserAnimeFrom2dGate:
         return self.target_url
 
 
+def search_in_2D_gate(q_str):
+    result = []
+    url = 'https://www.google.com.tw/search'
+    headers = {'User-Agent': 'Mozilla/5.0 Gecko/20100101 Firefox/46.0'}
+    req = requests.get(url, params={'q':'%s+site:http://2d-gate.org' % q_str}, headers = headers)
+
+    pat = re.compile("^http://2d.gate.org")
+    soup = BeautifulSoup(req.text, 'html.parser')
+    for tag in soup.find_all('a'):
+        link = tag.get('href')
+        if not link:
+            continue
+        if not pat.match(link):
+            continue
+        if not tag.string:
+            continue
+        result.append((tag.string.encode('utf8'), link))
+    return result
+
+
 if __name__ == '__main__':
     obj = ParserAnimeFrom2dGate()
 
