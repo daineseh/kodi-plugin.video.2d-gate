@@ -62,103 +62,125 @@ class Episode:
         self.__url = value
 
 
-class ProcessEpisodes():
+class ProcessEpisodes:
     def __init__(self, url):
         self.url = url
+        self.req = requests.get(self.url)
+        self.soup = BeautifulSoup(self.req.text, 'html.parser')
         self.episodes_list = []
         self.__parse()
 
-    def __parse_arch_1(self, tag):
-        gd_thumb = tag.find('div', 'gd_thumb')
-        if not gd_thumb:
-            return None, None, None
+    def __parse_tab(self, tag, prefix=None):
+        tab_data = []
+        div_tag = tag.find('div', {'style': 'display:none'})
+        if not div_tag:
+            return tab_data
+        ul_tag = div_tag.find('ul')
 
-        onclick = gd_thumb.get('onclick')
-        target = onclick.split(',')[1]
-        url = BUILD_GOOGLE_URL(target.strip('\''))
+        for li_tag in ul_tag.find_all('li'):
+            tag_a = li_tag.find('a')
+            if not tag_a:
+                continue
+            tab_id = tag_a.get('href').split('#')[-1]
+            if prefix:
+                tab_name = prefix + '-' + tag_a.string
+            else:
+                tab_name = tag_a.string
+            tab_data.append((tab_id, tab_name))
+        return tab_data
 
-        style = gd_thumb.get('style')
+    def __parse_info_style1(self, tag):
+        span_tag = tag.find('span')
+        if not span_tag:
+            return None, None
+        href = span_tag.get('href')
+        if not href:
+            return None, None
+        # Workaround
+        assert isinstance(href, str)
+        if 'amp;' in href:
+            url = href.replace('amp;', '')
+        else:
+            url = href
+        img_tag = tag.find('img')
+        if not img_tag:
+            return None, None
+        img = img_tag.get('src')
+        if not img:
+            return None, None
+        return url, img
+
+    def __parse_info_style2(self, tag):
+        div_tag = tag.find('div', {'class': 'yt_thumb'})
+        if not div_tag:
+            return None, None
+        onclick = div_tag.get('onclick')
+        if not onclick:
+            return None, None
+        style = div_tag.get('style')
         if not style:
-            return None, None, None
-        l_paren = style.rfind('(')
-        r_paren = style.rfind(')')
-        background = BUILD_URL(style[l_paren + 1:r_paren])
+            return None, None
+        url_id = onclick.split("(")[-1].split(")")[0].split(',')[1].strip('\'')
+        url = BUILD_GOOGLE_URL(url_id)
+        img = style.split("(")[-1].split(")")[0]
+        return url, img
 
-        img = gd_thumb.find('img')
-        if not img:
-            return None, None, None
-        thumb = BUILD_URL(img.get('src'))
-        return url, thumb, background
-
-    def __parse_arch_2(self, tag):
-        tag_a = tag.find('a')
-        if not tag_a:
-            return None, None, None
-        url = tag_a.get('href')
+    def __parse_info_style3(self, tag):
+        a_tag = tag.find('a', {"target":"_blank"})
+        if not a_tag:
+            return None, None
+        url = a_tag.get('href')
         if not url:
-            return None, None, None
-        img = tag_a.find('img')
-        if not img:
-            return None, None, None
-        thumb = background = BUILD_URL(img.get('src'))
-        # Skip fake tab
-        if url == thumb:
-            return None, None, None
-        return url, thumb, background
+            return None, None
+        img_tag = tag.find('img', {"alt": " (Google Drive Video) "})
+        if not img_tag:
+            return None, None
+        img_xpath = img_tag.get('src')
+        if not img_xpath:
+            return None, None
+        img = BUILD_URL(img_xpath)
+        return url, img
+
 
     def __parse(self):
-        req = requests.get(self.url)
-        soup = BeautifulSoup(req.text, 'html.parser')
-        content = soup.find('div', style="display:none")
-        if not content:
-            url, thumb, background = self.__parse_arch_1(soup)
-            if url and thumb and background:
-                self.episodes_list.append(Episode(str('1'), url, thumb, background))
-            return
+        tab_data = []
 
-        # Parse url of episodes
-        info = OrderedDict()
-        for tag in content.find_all('div'):
-            if tag.string:
-                continue
-            id = tag.get('id')
-            if not id:
-                continue
+        bg_tag = self.soup.find('img', {'class': 'cover'})
+        background = bg_tag.get('src')
 
-            if tag.find('div', 'gd_thumb'):
-                url, thumb, background = self.__parse_arch_1(tag)
-                if not url and not thumb and not background:
+        tab_of_top = self.__parse_tab(self.soup)
+        for id, name in tab_of_top:
+            tmp_tag = self.soup.find('div', {'id': id})
+            tab_of_nest = self.__parse_tab(tmp_tag, prefix=name)
+            if not tab_of_nest:
+                tab_data.append((id, name))
+            else:
+                tab_data.extend(tab_of_nest)
+
+        for id, name in tab_data:
+            div_tag = self.soup.find('div', {'id': id})
+
+            raw_data1 = div_tag.find('span')
+            raw_data2 = div_tag.find('div', {'class': 'yt_thumb'})
+            raw_data3 = div_tag.find('a')
+            if raw_data1:
+                # print('1 match - <span>')
+                url, thumb = self.__parse_info_style1(div_tag)
+                if not url or not thumb:
                     continue
-
-            elif tag.find('a'):
-                url, thumb, background = self.__parse_arch_2(tag)
-                if not url and not thumb and not background:
+            elif raw_data2:
+                # print('2 match - <div class="yt_thumb">')
+                url, thumb = self.__parse_info_style2(div_tag)
+                if not url or not thumb:
+                    continue
+            elif raw_data3:
+                # print('3 match - <a>')
+                url, thumb = self.__parse_info_style3(div_tag)
+                if not url or not thumb:
                     continue
             else:
-                #TODO: another arch type
                 continue
-            info[id] = [url, thumb, background]
-
-        # Parse number of episodes
-        number_dict = {}
-        for tag in content.find_all('a'):
-            href = tag.get('href')
-            if not href:
-                continue
-            if '#' not in href:
-                continue
-            tab = href.split('#')[-1]
-            tab_content = tag.string.encode('utf8')
-            number_dict[tab] = tab_content
-
-        # Strip invalid tab
-        for id in info:
-            number = number_dict.get(id)
-            if not number:
-                continue
-            url, thumb, background = info.get(id)
-            # print number, url, background, thumb
-            self.episodes_list.append(Episode(number, url, thumb, background))
+            self.episodes_list.append(Episode(name, url, thumb, background))
 
     def get_list(self):
         return self.episodes_list
