@@ -76,6 +76,8 @@ class ProcessEpisodes:
         if not div_tag:
             return tab_data
         ul_tag = div_tag.find('ul')
+        if not ul_tag:
+            return tab_data
 
         for li_tag in ul_tag.find_all('li'):
             tag_a = li_tag.find('a')
