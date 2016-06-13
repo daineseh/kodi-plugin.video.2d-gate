@@ -33,11 +33,8 @@ if mode is None:
                                     listitem=li, isFolder=True)
 
     target_url = obj.get_target_url()
-    li = xbmcgui.ListItem('')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=None, listitem=li, isFolder=False)
-
     url = build_url({'mode': 'page', 'folder_name': target_url})
-    li = xbmcgui.ListItem("Next Page (%s) >> ┏┃^0^┃┛ >> ᕕ(╯°□°)ᕗ >> ┌( ಠ‿ಠ)┘ >> ε＝┏(･ω･)┛ >> " % page_number(target_url))
+    li = xbmcgui.ListItem("[COLOR aqua]下一頁 (%s) >>[/COLOR]" % page_number(target_url))
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
     xbmcplugin.endOfDirectory(addon_handle)
 
@@ -65,16 +62,13 @@ elif mode[0] == 'page':
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
 
     if obj.next_page:
-        li = xbmcgui.ListItem('')
-        xbmcplugin.addDirectoryItem(handle=addon_handle, url=None, listitem=li, isFolder=False)
-
         url = build_url({'mode': 'page', 'folder_name': obj.next_page})
-        li = xbmcgui.ListItem("Next Page (%s) >> ┏┃^0^┃┛ >> ᕕ(╯°□°)ᕗ >> ┌( ಠ‿ಠ)┘ >> ε＝┏(･ω･)┛ >> " % page_number(obj.next_page) * 2)
+        li = xbmcgui.ListItem("[COLOR aqua]下一頁 (%s) >>[/COLOR]" % page_number(obj.next_page))
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
 
     if obj.last_page:
         url = build_url({'mode': 'page', 'folder_name': obj.last_page})
-        li = xbmcgui.ListItem("Last Page (%s) >> ┏┃^0^┃┛ >> ᕕ(╯°□°)ᕗ >> ┌( ಠ‿ಠ)┘ >> ε＝┏(･ω･)┛ >> " % page_number(obj.last_page))
+        li = xbmcgui.ListItem("[COLOR deepskyblue]最終頁 (%s) >|[/COLOR]" % page_number(obj.last_page))
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
     xbmcplugin.endOfDirectory(addon_handle)
 
