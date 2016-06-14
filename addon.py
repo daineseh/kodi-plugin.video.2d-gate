@@ -7,7 +7,7 @@ import xbmcgui
 import xbmcplugin
 import youtube_dl
 
-from clawler import ParserAnimeFrom2dGate, ProcessEpisodes
+from clawler import ParserAnimeFrom2dGate, ProcessEpisodes, search_in_2D_gate
 
 
 base_url = sys.argv[0]
@@ -25,6 +25,10 @@ def page_number(url):
 mode = args.get('mode', None)
 
 if mode is None:
+    url = build_url({'mode': 'search'})
+    li = xbmcgui.ListItem("[COLOR yellow]搜尋動畫...[/COLOR]")
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
+
     obj = ParserAnimeFrom2dGate()
     for item in obj.get_classes():
         url = build_url({'mode': 'week_folder', 'folder_name': item})
@@ -37,6 +41,17 @@ if mode is None:
     li = xbmcgui.ListItem("[COLOR aqua]下一頁 (%s) >>[/COLOR]" % page_number(target_url))
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
     xbmcplugin.endOfDirectory(addon_handle)
+
+elif mode[0] == 'search':
+    keyboard = xbmc.Keyboard('', '輸入動畫名或關鍵字')
+    keyboard.doModal()
+    if keyboard.isConfirmed():
+        search_term = keyboard.getText()
+        for (title, url) in search_in_2D_gate(search_term):
+            url = build_url({'mode': 'anime_info', 'folder_name': url})
+            li = xbmcgui.ListItem("[COLOR white]%s[/COLOR]" % title)
+            xbmcplugin.addDirectoryItem(handle=addon_handle, url=url, listitem=li, isFolder=True)
+            xbmcplugin.endOfDirectory(addon_handle)
 
 elif mode[0] == 'week_folder':
     obj = ParserAnimeFrom2dGate()

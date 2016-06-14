@@ -3,6 +3,7 @@
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 
+import re
 import requests
 import urlparse
 
